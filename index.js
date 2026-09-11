@@ -7,8 +7,12 @@ require('dotenv').config();
 const express = require('express');
 const path = require('path');
 
+const connectDB = require('./config/db');
 const requestLogger = require('./middlewares/logger');
+const errorHandler = require('./middlewares/errorHandler');
 const mainRoutes = require('./routes/mainRoutes');
+const userRoutes = require('./routes/userRoutes');
+const postRoutes = require('./routes/postRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -22,6 +26,8 @@ app.use(express.static(path.join(__dirname, 'public')));
 
 // --- Rutas ---
 app.use('/', mainRoutes);
+app.use('/api/users', userRoutes);
+app.use('/api/posts', postRoutes);
 
 // --- Manejo de rutas no encontradas ---
 app.use((req, res) => {
@@ -32,7 +38,14 @@ app.use((req, res) => {
   });
 });
 
-app.listen(PORT, () => {
-  console.log('Servidor iniciado');
-  console.log(`Escuchando en http://localhost:${PORT}`);
+// --- Manejo centralizado de errores (siempre al final) ---
+app.use(errorHandler);
+
+// Primero se conecta a la base de datos y recién después se levanta el
+// servidor, para evitar aceptar requests sin tener acceso a los datos.
+connectDB().then(() => {
+  app.listen(PORT, () => {
+    console.log('Servidor iniciado');
+    console.log(`Escuchando en http://localhost:${PORT}`);
+  });
 });
